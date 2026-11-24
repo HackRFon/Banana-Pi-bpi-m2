@@ -42,9 +42,10 @@ echo "bpi-m2" > "$ROOT/etc/hostname"
 echo "127.0.1.1 bpi-m2" >> "$ROOT/etc/hosts"
 echo "/dev/mmcblk0p1 / ext4 defaults,noatime 0 1" > "$ROOT/etc/fstab"
 
-cat > "$ROOT/etc/default/u-boot" <<'EOF'
-U_BOOT_PARAMETERS="ro rootwait console=ttyS0,115200 console=tty1 root=/dev/mmcblk0p1"
-U_BOOT_FDT_DIR="/usr/lib/linux-image-"
+# Never prompt about config files during package installs
+mkdir -p "$ROOT/etc/apt/apt.conf.d"
+cat > "$ROOT/etc/apt/apt.conf.d/99noprompt" <<'EOF'
+Dpkg::Options { "--force-confdef"; "--force-confold"; };
 EOF
 
 mkdir -p "$ROOT/etc/modprobe.d"
@@ -82,6 +83,10 @@ set -e
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
 apt-get install -y u-boot-menu u-boot-sunxi initramfs-tools
+cat > /etc/default/u-boot <<'UBEOF'
+U_BOOT_PARAMETERS="ro rootwait console=ttyS0,115200 console=tty1 root=/dev/mmcblk0p1"
+U_BOOT_FDT_DIR="/usr/lib/linux-image-"
+UBEOF
 apt-get install -y linux-image-armmp \
   systemd-sysv sudo openssh-server network-manager wpasupplicant wireless-regdb \
   usbutils pciutils parted e2fsprogs chrony
@@ -121,3 +126,4 @@ dd if="$HERE/u-boot-sunxi-with-spl.bin" of="$HERE/$IMG" bs=1024 seek=8 conv=notr
 rm -f "$HERE/rootfs.ext4"
 xz -k -f -T0 "$HERE/$IMG"
 echo "Done: $HERE/$IMG and $IMG.xz"
+
