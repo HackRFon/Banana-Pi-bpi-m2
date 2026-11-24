@@ -119,8 +119,11 @@ else
     wget bzip2 uuid-dev libgnutls28-dev
   UB="$HERE/uboot-build"
   rm -rf "$UB"; mkdir -p "$UB"
-  wget -O "$UB/u-boot.tar.bz2" https://ftp.denx.de/pub/u-boot/u-boot-2023.01.tar.bz2
-  tar -xf "$UB/u-boot.tar.bz2" -C "$UB" --strip-components=1
+  # GitHub mirror first (reachable from GitHub Actions); denx.de as a fallback
+  wget --tries=5 --timeout=30 -O "$UB/u-boot.tar" https://github.com/u-boot/u-boot/archive/refs/tags/v2023.01.tar.gz \
+    || wget --tries=3 --timeout=30 -O "$UB/u-boot.tar" https://ftp.denx.de/pub/u-boot/u-boot-2023.01.tar.bz2 \
+    || { echo "Could not download U-Boot source"; exit 1; }
+  tar -xf "$UB/u-boot.tar" -C "$UB" --strip-components=1
   make -C "$UB" CROSS_COMPILE=arm-linux-gnueabihf- Sinovoip_BPI_M2_defconfig
   make -C "$UB" CROSS_COMPILE=arm-linux-gnueabihf- -j"$(nproc)"
   [ -f "$UB/u-boot-sunxi-with-spl.bin" ] || { echo "U-Boot build failed"; exit 1; }
