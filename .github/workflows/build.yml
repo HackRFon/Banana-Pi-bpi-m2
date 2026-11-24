@@ -4,7 +4,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
@@ -18,3 +18,4 @@ jobs:
           name: bpi-m2-debian-image
           path: bpi-m2-debian.img.xz
           compression-level: 0
+
