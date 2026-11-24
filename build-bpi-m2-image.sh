@@ -13,8 +13,12 @@ ROOT=$HERE/rootfs-build
 case "$HERE" in /mnt/*) echo "Copy these files to your Linux home (e.g. ~/bpi) first; /mnt/c breaks permissions."; exit 1;; esac
 [ "$(id -u)" -eq 0 ] || { echo "Run with sudo"; exit 1; }
 
-apt-get update
-apt-get install -y debootstrap qemu-user-static binfmt-support e2fsprogs util-linux fdisk xz-utils
+apt-get update || true
+apt-get install -y debootstrap e2fsprogs util-linux fdisk xz-utils
+# ARM emulation packages are named differently on different Ubuntu/Debian releases
+apt-get install -y qemu-user-static binfmt-support \
+  || apt-get install -y qemu-user-static \
+  || apt-get install -y qemu-user qemu-user-binfmt
 
 # Make sure ARM emulation is registered (needed in WSL2)
 mountpoint -q /proc/sys/fs/binfmt_misc || mount -t binfmt_misc none /proc/sys/fs/binfmt_misc || true
