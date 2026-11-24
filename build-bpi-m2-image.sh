@@ -107,9 +107,25 @@ chroot "$ROOT" /bin/bash /tmp/setup.sh
 rm -f "$ROOT/tmp/setup.sh"
 cleanup
 
+# ---- U-Boot: use Debian's build if it has one for this board, else compile it ----
+echo "U-Boot boards shipped by Debian:"; ls "$ROOT/usr/lib/u-boot/" || true
 UBOOT="$ROOT/usr/lib/u-boot/Sinovoip_BPI_M2/u-boot-sunxi-with-spl.bin"
-[ -f "$UBOOT" ] || { echo "U-Boot for Sinovoip_BPI_M2 not found"; exit 1; }
-cp "$UBOOT" "$HERE/u-boot-sunxi-with-spl.bin"
+if [ -f "$UBOOT" ]; then
+  cp "$UBOOT" "$HERE/u-boot-sunxi-with-spl.bin"
+else
+  echo "Debian has no BPI-M2 U-Boot; building from upstream source..."
+  apt-get install -y gcc-arm-linux-gnueabihf make bison flex libssl-dev swig \
+    python3-dev python3-setuptools python3-pyelftools device-tree-compiler bc \
+    wget bzip2 uuid-dev libgnutls28-dev
+  UB="$HERE/uboot-build"
+  rm -rf "$UB"; mkdir -p "$UB"
+  wget -O "$UB/u-boot.tar.bz2" https://ftp.denx.de/pub/u-boot/u-boot-2023.01.tar.bz2
+  tar -xf "$UB/u-boot.tar.bz2" -C "$UB" --strip-components=1
+  make -C "$UB" CROSS_COMPILE=arm-linux-gnueabihf- Sinovoip_BPI_M2_defconfig
+  make -C "$UB" CROSS_COMPILE=arm-linux-gnueabihf- -j"$(nproc)"
+  [ -f "$UB/u-boot-sunxi-with-spl.bin" ] || { echo "U-Boot build failed"; exit 1; }
+  cp "$UB/u-boot-sunxi-with-spl.bin" "$HERE/u-boot-sunxi-with-spl.bin"
+fi
 
 # ---- assemble the SD image WITHOUT mounting anything -----------------------
 PART_MB=$((IMG_MB - 1))
